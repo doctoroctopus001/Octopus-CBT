@@ -1,0 +1,342 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEET Pulse - CBT Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+        }
+
+        /* Custom Scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8; 
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .option-label {
+            transition: all 0.2s ease;
+        }
+        
+        .option-input:checked + .option-label {
+            border-color: #10b981; /* Emerald-500 */
+            background-color: #ecfdf5; /* Emerald-50 */
+        }
+        
+        .option-input:checked + .option-label .option-indicator {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .palette-btn.answered { background-color: #10b981; color: white; border-color: #10b981; }
+        .palette-btn.unanswered { background-color: white; color: #6b7280; border-color: #d1d5db; }
+        .palette-btn.review { background-color: #8b5cf6; color: white; border-color: #8b5cf6; } /* Violet-500 */
+        .palette-btn.answered-review { background-color: #8b5cf6; color: white; border-color: #8b5cf6; position: relative; }
+        .palette-btn.answered-review::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #10b981;
+        }
+        .palette-btn.active-q { border: 2px solid #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
+
+        /* Hide elements based on state */
+        .hidden-state { display: none !important; }
+
+        /* Loader */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-10 shrink-0">
+        <div class="flex items-center gap-4">
+            <button id="sidebarToggleBtn" class="p-2 rounded-md text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-lg">
+                    N
+                </div>
+                <span class="font-semibold text-lg text-gray-800 tracking-tight hidden sm:block">NEET Pulse</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4" id="topNavControls">
+            <div id="testInfoBadge" class="hidden md:flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-sm font-medium border border-indigo-100">
+                <i class="fas fa-clipboard-list"></i>
+                <span id="currentTestNameDisplay">Review Test 2</span>
+            </div>
+            <button class="p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="absolute z-20 sm:relative w-64 h-full bg-white border-r border-gray-200 transform -translate-x-full sm:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col shadow-xl sm:shadow-none">
+            <div class="p-4 flex flex-col gap-2 flex-1">
+                <button class="view-btn flex items-center gap-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-left" data-target="dashboard">
+                    <i class="fas fa-home w-5 text-center"></i>
+                    <span class="font-medium">Dashboard</span>
+                </button>
+                <button class="view-btn flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg transition-colors text-left font-medium" data-target="tests-list">
+                    <i class="fas fa-list-check w-5 text-center"></i>
+                    <span>Tests</span>
+                </button>
+                <button class="view-btn flex items-center gap-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-left" data-target="upload-pdf">
+                    <i class="fas fa-file-pdf w-5 text-center"></i>
+                    <span class="font-medium">Upload PDF (Mock)</span>
+                </button>
+                 <button class="view-btn flex items-center gap-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-left" data-target="progress-report">
+                    <i class="fas fa-chart-line w-5 text-center"></i>
+                    <span class="font-medium">Progress Report</span>
+                </button>
+            </div>
+            
+            <div class="p-4 border-t border-gray-100">
+                <button class="w-full py-2 px-4 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 font-medium">
+                    <i class="fab fa-telegram-plane"></i>
+                    Telegram
+                </button>
+                <div class="mt-3 flex items-center gap-2 text-xs text-gray-500 justify-center">
+                    <span class="w-2 h-2 rounded-full bg-green-500 block"></span>
+                    Device-only progress
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Views Container -->
+        <main class="flex-1 bg-slate-50 relative overflow-y-auto">
+            
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="app-view hidden-state p-6 max-w-5xl mx-auto">
+                <h1 class="text-2xl font-bold text-gray-800 mb-6">Welcome Back</h1>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-2">Tests Taken</h3>
+                        <p class="text-3xl font-bold text-gray-800">12</p>
+                    </div>
+                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-2">Average Accuracy</h3>
+                        <p class="text-3xl font-bold text-emerald-600">76%</p>
+                    </div>
+                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-2">Time Spent</h3>
+                        <p class="text-3xl font-bold text-indigo-600">14h 30m</p>
+                    </div>
+                </div>
+                <div class="mt-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h2>
+                    <p class="text-gray-500">You haven't completed any tests recently. Go to the Tests section to start.</p>
+                </div>
+            </div>
+
+            <!-- Tests List View -->
+            <div id="view-tests-list" class="app-view p-6 max-w-5xl mx-auto">
+                <h1 class="text-2xl font-bold text-gray-800 mb-6">Available Tests</h1>
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 bg-indigo-900 text-white flex justify-between items-center flex-wrap gap-4">
+                        <div>
+                            <span class="inline-flex items-center gap-1 text-xs font-medium bg-indigo-800 px-2 py-1 rounded text-indigo-100 mb-2">
+                                <i class="fas fa-bolt text-yellow-400"></i> Leader 2026 Batch
+                            </span>
+                            <h2 class="text-xl font-bold">REVIEW TEST 2</h2>
+                            <p class="text-sm text-indigo-200 mt-1">45 Questions • Physics • +4 correct / -1 incorrect</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                             <button class="bg-indigo-800 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors border border-indigo-600 flex items-center gap-2">
+                                <i class="fas fa-moon"></i> Dark Mode
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 flex justify-between items-center bg-gray-50">
+                         <div class="flex items-center gap-3">
+                            <label class="text-sm text-gray-600 font-medium">Mode:</label>
+                            <select class="border border-gray-300 rounded-md text-sm px-3 py-1.5 bg-white focus:outline-none focus:border-indigo-500">
+                                <option>Exam Mode (Real Simulation)</option>
+                                <option>Practice Mode (See Answers)</option>
+                            </select>
+                        </div>
+                        <button id="startTestBtn" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
+                            <i class="fas fa-play"></i> Start Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload PDF (Simulation) View -->
+            <div id="view-upload-pdf" class="app-view hidden-state p-6 max-w-3xl mx-auto">
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">Upload Question PDF</h1>
+                <p class="text-gray-500 mb-6 text-sm">Our AI will attempt to extract questions, options, and images to generate a CBT test. (Mock functionality for demonstration).</p>
+                
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center bg-white hover:bg-gray-50 transition-colors cursor-pointer" id="dropzone">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-1">Click to upload or drag and drop</h3>
+                    <p class="text-sm text-gray-500">PDF files only (Max 10MB)</p>
+                    <input type="file" id="pdfUploadInput" class="hidden" accept=".pdf">
+                    <button class="mt-6 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition" onclick="document.getElementById('pdfUploadInput').click()">Browse Files</button>
+                </div>
+                
+                <div id="uploadStatus" class="hidden-state mt-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-center">
+                    <div class="flex justify-center mb-4">
+                        <div class="loader"></div>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">Processing PDF...</h3>
+                    <p class="text-sm text-gray-500 mt-2">Extracting text, equations, and images. This might take a few moments.</p>
+                </div>
+
+                <div id="uploadSuccess" class="hidden-state mt-6 bg-emerald-50 border border-emerald-200 p-6 rounded-xl text-center">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xl mx-auto mb-3">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h3 class="font-semibold text-emerald-800 mb-1">Processing Complete!</h3>
+                    <p class="text-sm text-emerald-600 mb-4">Successfully extracted 15 questions with images.</p>
+                    <button id="startExtractedTestBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm">
+                        Start Extracted Test
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Report View -->
+            <div id="view-progress-report" class="app-view hidden-state w-full min-h-full pb-10">
+                <!-- Report Header -->
+                <div class="bg-indigo-500 text-white p-6 pb-12 rounded-b-3xl mb-8">
+                    <div class="max-w-5xl mx-auto">
+                        <h1 class="text-3xl font-bold mb-2">NEET Pulse - Progress Report</h1>
+                        <p class="text-indigo-100 text-sm">REVIEW TEST 2 • <span id="reportCorrectCount">0</span>/15 correct • <span id="reportAccuracy">0</span>% accuracy</p>
+                    </div>
+                </div>
+
+                <div class="max-w-5xl mx-auto px-4 -mt-12">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col">
+                            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Correct</span>
+                            <span class="text-2xl font-bold text-emerald-500" id="statCorrect">0</span>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col">
+                            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Incorrect</span>
+                            <span class="text-2xl font-bold text-red-500" id="statIncorrect">0</span>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col">
+                            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Unattempted</span>
+                            <span class="text-2xl font-bold text-gray-400" id="statUnattempted">15</span>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col">
+                            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Accuracy</span>
+                            <span class="text-2xl font-bold text-indigo-500" id="statAccuracyPercent">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Questions Review List -->
+                    <div id="reportQuestionsList" class="flex flex-col gap-6">
+                        <!-- Questions will be injected here via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exam/CBT View -->
+            <div id="view-exam" class="app-view hidden-state h-full flex flex-col w-full relative">
+                
+                <!-- Exam Top Bar -->
+                <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shrink-0 glass-panel z-10 sticky top-0">
+                    <div class="flex items-center gap-3">
+                        <button id="exitTestBtn" class="px-4 py-1.5 rounded border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
+                            Exit
+                        </button>
+                        <div class="hidden sm:block">
+                            <div class="text-xs text-gray-500">Leader 2026</div>
+                            <div class="text-sm font-bold text-gray-800">REVIEW TEST 2</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="text-right flex items-center gap-3">
+                            <div class="hidden md:block">
+                                <span class="text-xs text-gray-500">Question <span id="headerQNum">1</span>/15</span>
+                            </div>
+                            <div class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-md font-bold tabular-nums flex items-center gap-2">
+                                <i class="far fa-clock text-indigo-400"></i>
+                                <span id="examTimerDisplay">03:00:00</span>
+                            </div>
+                        </div>
+                        <button id="togglePaletteBtn" class="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-md text-sm font-medium">
+                            <i class="fas fa-th"></i>
+                            <span>Palette</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Exam Content Area (Question + Sidebar) -->
+                <div class="flex-1 flex overflow-hidden w-full relative">
+                    
+                    <!-- Main Question Area -->
+                    <div class="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 scroll-smooth" id="questionContainerMain">
+                        <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            
+                            <!-- Question Header -->
+                            <div class="px-6 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                <span class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Physics • General</span>
+                                <div class="flex gap-2">
+                                     <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded font-medium">Question <span id="currentQNumBadge">1</span></span>
+                                     <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-medium">+4 Marks</span>
+                                </div>
+                            </div>
+
+                            <!-- Question Content -->
+                            <div class="p-6">
+                                <div id="questionText" class="text-lg text-gray-800 leading-relaxed mb-4">
+                                    <!-- Question text will go here -->
+  
